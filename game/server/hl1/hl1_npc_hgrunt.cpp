@@ -12,6 +12,7 @@
 // $NoKeywords: $
 //=============================================================================//
 
+#include "ai_condition.h"
 #include	"cbase.h"
 #include	"beam_shared.h"
 #include	"ai_default.h"
@@ -236,7 +237,7 @@ void CNPC_HGrunt::Spawn()
 	m_bloodColor		= BLOOD_COLOR_RED;
 	ClearEffects();
 	m_iHealth			= sk_hgrunt_health.GetFloat();
-	m_flFieldOfView		= 0.2;// indicates the width of this monster's forward view cone ( as a dotproduct result )
+	m_flFieldOfView		= 0.4;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_NPCState			= NPC_STATE_NONE;
 	m_flNextGrenadeCheck = gpGlobals->curtime + 1;
 	m_flNextPainTime	= gpGlobals->curtime;
@@ -299,8 +300,25 @@ void CNPC_HGrunt::Spawn()
 	BaseClass::Spawn();
 
 	NPCInit();
+	CreateVPhysics();
 }
 
+bool CNPC_HGrunt::CreateVPhysics(void)
+{
+     VPhysicsDestroyObject();
+
+	CPhysCollide* pModel = PhysCreateBbox(NAI_Hull::Mins(HULL_HUMAN), NAI_Hull::Maxs(HULL_HUMAN));
+	IPhysicsObject* pPhysics = PhysModelCreateCustom(this, pModel, GetAbsOrigin(), GetAbsAngles(), "barney_hull", false);
+
+	VPhysicsSetObject(pPhysics);
+	if (pPhysics)
+	{
+		pPhysics->SetCallbackFlags(CALLBACK_GLOBAL_COLLISION | CALLBACK_SHADOW_COLLISION);
+	}
+	PhysAddShadow(this);
+
+	return true;
+}
 int CNPC_HGrunt::IRelationPriority( CBaseEntity *pTarget )
 {
 	//I hate alien grunts more than anything.
@@ -425,10 +443,11 @@ void CNPC_HGrunt::PrescheduleThink ( void )
 		}
 		else
 		{
-			if ( gpGlobals->curtime - pSquadLeader->m_flLastEnemySightTime > 5 )
+			if ( gpGlobals->curtime - pSquadLeader->m_flLastEnemySightTime > 5.0f )
 			{
 				// been a while since we've seen the enemy
-				pSquadLeader->GetEnemies()->MarkAsEluded( GetEnemy() );
+				pSquadLeader->GetEnemies()->MarkAsEluded( GetEnemy() ); 
+				 
 			}
 		}
 	}
@@ -624,6 +643,10 @@ int CNPC_HGrunt::RangeAttack1Conditions ( float flDot, float flDist )
 			// kick nonclients, but don't shoot at them.
 			return COND_NONE;
 		}
+		if (GetEnemy())
+		{
+			return COND_CAN_RANGE_ATTACK1;
+		}
 
 		Vector vecSrc;
 		QAngle angAngles;
@@ -768,7 +791,7 @@ int CNPC_HGrunt::GetGrenadeConditions( float flDot, float flDist  )
 			m_vecTossVelocity = vecToss;
 
 			// don't check again for a while.
-			m_flNextGrenadeCheck = gpGlobals->curtime + 0.3; // 1/3 second.
+			m_flNextGrenadeCheck = gpGlobals->curtime + 0.1; // 1/3 second.
 
 			return COND_CAN_RANGE_ATTACK2;
 		}
@@ -1640,6 +1663,7 @@ int CNPC_HGrunt::SelectSchedule( void )
 						// little time and give the player a chance to turn.
 						if ( pSquadLeader && pSquadLeader->EnemyHasEludedMe() && !HasCondition ( COND_ENEMY_FACING_ME ) )
 						{
+							pSquadLeader->EnemyHasEludedMe(); // try to fix bug in chapter we`re all hostiles
 							return SCHED_GRUNT_FOUND_ENEMY;
 						}
 					}
@@ -2557,7 +2581,14 @@ AI_BEGIN_CUSTOM_NPC( monster_human_grunt, CNPC_HGrunt )
 
 AI_END_CUSTOM_NPC()
 
+// Nothing , just shit
+/* void MortarSpray(const Vector& position, const Vector& direction, int spriteModel, int count)
+{
+	CPVSFilter filter(position);
 
+	te->SpriteSpray(filter, 0.0, &position, &direction, spriteModel, 200, 80, count);
+}
+ */
 //=========================================================
 // DEAD HGRUNT PROP
 //=========================================================

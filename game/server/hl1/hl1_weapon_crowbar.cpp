@@ -7,6 +7,7 @@
 
 #include "cbase.h"
 #include "hl1mp_basecombatweapon_shared.h"
+#include "weapon_parse.h"
 
 #ifdef CLIENT_DLL
 #include "c_baseplayer.h"
@@ -21,6 +22,7 @@
 #include "ammodef.h"
 #include "mathlib/mathlib.h"
 #include "in_buttons.h"
+
 
 #include "vstdlib/random.h"
 
@@ -63,7 +65,7 @@ private:
 	virtual void		Swing( void );
 	virtual	void		Hit( void );
 	virtual	void		ImpactEffect( void );
-	void		ImpactSound( CBaseEntity *pHitEntity );
+	void		ImpactSound( bool isWorld , trace_t &hitTrace , CBaseEntity *pHitEntity);
 	virtual Activity	ChooseIntersectionPointAndActivity( trace_t &hitTrace, const Vector &mins, const Vector &maxs, CBasePlayer *pOwner );
 
 public:
@@ -95,7 +97,7 @@ BEGIN_DATADESC( CWeaponCrowbar )
 
 	// Function Pointers
 	DEFINE_FUNCTION( Hit ),
-
+    
 END_DATADESC()
 #endif
 
@@ -184,8 +186,9 @@ void CWeaponCrowbar::Hit( void )
 		TraceAttackToTriggers( CTakeDamageInfo( GetOwner(), GetOwner(), sk_plr_dmg_crowbar.GetFloat(), DMG_CLUB ), m_traceHit.startpos, m_traceHit.endpos, hitDirection );
 
 		//Play an impact sound	
-		ImpactSound( pHitEntity );
+		ImpactSound( pHitEntity->Classify() == CLASS_NONE || pHitEntity->Classify() == CLASS_MACHINE, m_traceHit , pHitEntity );
 	}
+
 #endif
 
 	//Apply an impact effect
@@ -197,23 +200,31 @@ void CWeaponCrowbar::Hit( void )
 // Input  : pHitEntity - entity that we hit
 // assumes pHitEntity is not null
 //-----------------------------------------------------------------------------
-void CWeaponCrowbar::ImpactSound( CBaseEntity *pHitEntity )
+void CWeaponCrowbar::ImpactSound( bool isWorld , trace_t &hitTrace , CBaseEntity *pHitEntity )
 {
-	bool bIsWorld = ( pHitEntity->entindex() == 0 );
+	bool IsWorld = ( pHitEntity->entindex() );
 #ifndef CLIENT_DLL
-	if ( !bIsWorld )
+	if ( !isWorld )
 	{
-		bIsWorld |=	pHitEntity->Classify() == CLASS_NONE ||  pHitEntity->Classify() == CLASS_MACHINE;
+		isWorld |= pHitEntity->Classify() == CLASS_NONE ||  pHitEntity->Classify() == CLASS_MACHINE;
 	}
 #endif
 
-	if( bIsWorld )
+	if( isWorld )
 	{
-		WeaponSound( MELEE_HIT_WORLD );
+		switch (random->RandomInt(0, 1))
+		{
+		case 0:
+			WeaponSound( MELEE_HIT_WORLD );
+			break;
+		case 1:
+		    WeaponSound( MELEE_HIT );
+            break;
+		}
 	}
 	else 
 	{
-		WeaponSound( MELEE_HIT );
+		WeaponSound( MELEE_MISS );
 	}
 }
 
