@@ -93,6 +93,7 @@ ConVar hl2_darkness_flashlight_factor ( "hl2_darkness_flashlight_factor", "1" );
 	#define	HL2_WALK_SPEED hl2_walkspeed.GetFloat()
 	#define	HL2_NORM_SPEED hl2_normspeed.GetFloat()
 	#define	HL2_SPRINT_SPEED hl2_sprintspeed.GetFloat()
+	#define PLAYER_MODEL "models/player.mdl"
 #endif
 
 ConVar player_showpredictedposition( "player_showpredictedposition", "0" );
@@ -389,7 +390,10 @@ END_DATADESC()
 
 CHL2_Player::CHL2_Player()
 {
-	m_nNumMissPositions	= 0;
+	m_pPlayerAnimState = CreatePlayerAnimationState( this );
+	m_angEyeAngles.Init();
+
+	m_nNumMissPositions = 0;
 	m_pPlayerAISquad = 0;
 	m_bSprintEnabled = true;
 
@@ -425,6 +429,9 @@ END_SEND_TABLE()
 void CHL2_Player::Precache( void )
 {
 	BaseClass::Precache();
+
+	PrecacheModel( "models/weapons/arms/hands.mdl" );
+	PrecacheModel( PLAYER_MODEL );
 
 	PrecacheScriptSound( "HL2Player.SprintNoPower" );
 	PrecacheScriptSound( "HL2Player.SprintStart" );
@@ -900,8 +907,14 @@ void CHL2_Player::PostThink( void )
 
 	if ( !g_fGameOver && !IsPlayerLockedInPlace() && IsAlive() )
 	{
-		 HandleAdmireGlovesAnimation();
+		HandleAdmireGlovesAnimation();
 	}
+
+	m_angEyeAngles = EyeAngles();
+	QAngle angles = GetLocalAngles();
+	angles[PITCH] = 0;
+	SetLocalAngles( angles );
+	m_pPlayerAnimState->Update();
 }
 
 void CHL2_Player::StartAdmireGlovesAnimation( void )
@@ -1111,11 +1124,13 @@ void CHL2_Player::Spawn(void)
 
 #ifndef HL2MP
 #ifndef PORTAL
-	SetModel( "models/player.mdl" );
+	SetModel( PLAYER_MODEL );
 #endif
 #endif
 
 	BaseClass::Spawn();
+
+	GetViewModel(1)->SetModel( "models/weapons/arms/hands.mdl" );
 
 	//
 	// Our player movement speed is set once here. This will override the cl_xxxx
@@ -1381,6 +1396,12 @@ void CHL2_Player::InitVCollision( const Vector &vecAbsOrigin, const Vector &vecA
 
 CHL2_Player::~CHL2_Player( void )
 {
+	// Clears the animation state.
+	if ( m_pPlayerAnimState != NULL )
+	{
+	    m_pPlayerAnimState->Release();
+	    m_pPlayerAnimState = NULL;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -3916,6 +3937,182 @@ void CLogicPlayerProxy::InputSetLocatorTargetEntity( inputdata_t &inputdata )
 
 	CHL2_Player *pPlayer = dynamic_cast<CHL2_Player*>(m_hPlayer.Get());
 	pPlayer->SetLocatorTargetEntity(pTarget);
+}
+
+// Set the activity based on an event or current state
+void CHL2_Player::SetAnimation( PLAYER_ANIM playerAnim )
+{
+    int animDesired;
+
+    float speed;
+
+    speed = GetAbsVelocity().Length2D();
+
+    if ( GetFlags() & ( FL_FROZEN | FL_ATCONTROLS ) )
+    {
+        speed = 0;
+        playerAnim = PLAYER_IDLE;
+    }
+
+    Activity idealActivity = ACT_HL2MP_RUN;
+
+    if ( playerAnim == PLAYER_JUMP )
+    {
+        if ( HasWeapons() )
+            idealActivity = ACT_HL2MP_JUMP;
+        else
+            idealActivity = ACT_JUMP;
+    }
+    else if ( playerAnim == PLAYER_DIE )
+    {
+        if ( m_lifeState == LIFE_ALIVE )
+        {
+            return;
+        }
+    }
+    else if ( playerAnim == PLAYER_ATTACK1 )
+    {
+        if ( GetActivity( ) == ACT_HOVER    ||
+             GetActivity( ) == ACT_SWIM        ||
+             GetActivity( ) == ACT_HOP        ||
+             GetActivity( ) == ACT_LEAP        ||
+             GetActivity( ) == ACT_DIESIMPLE )
+        {
+            idealActivity = GetActivity( );
+        }
+        else
+        {
+            idealActivity = ACT_HL2MP_GESTURE_RANGE_ATTACK;
+        }
+    }
+    else if ( playerAnim == PLAYER_RELOAD )
+    {
+        idealActivity = ACT_HL2MP_GESTURE_RELOAD;
+    }
+    else if ( playerAnim == PLAYER_IDLE || playerAnim == PLAYER_WALK )
+    {
+        if ( !( GetFlags() & FL_ONGROUND ) && ( GetActivity( ) == ACT_HL2MP_JUMP || GetActivity( ) == ACT_JUMP ) )    // Still jumping
+        {
+            idealActivity = GetActivity( );
+        }   
+        else if ( GetWaterLevel() > 1 )
+        {
+            if ( speed == 0 )
+            {
+                if ( HasWeapons() )
+                    idealActivity = ACT_HL2MP_IDLE;
+                else
+                    idealActivity = ACT_IDLE;
+            }
+            else
+            {
+                if ( HasWeapons() )
+                    idealActivity = ACT_HL2MP_RUN;
+                else
+                    idealActivity = ACT_RUN;
+            }
+        }
+        else
+        {
+            if ( GetFlags() & FL_DUCKING )
+            {
+                if ( speed > 0 )
+                {
+                    if ( HasWeapons() )
+                        idealActivity = ACT_HL2MP_WALK_CROUCH;
+                    else
+                        idealActivity = ACT_WALK_CROUCH;
+                }
+                else
+                {
+                    if ( HasWeapons() )
+                        idealActivity = ACT_HL2MP_IDLE_CROUCH;
+                    else
+                        idealActivity = ACT_COVER_LOW;
+                }
+            }
+            else
+            {
+                if ( speed > 0 )
+                {
+                    {
+                        if ( HasWeapons() )
+                            idealActivity = ACT_HL2MP_RUN;
+                        else
+                        {
+                            if ( speed > HL2_WALK_SPEED + 20.0f )
+                                idealActivity = ACT_RUN;
+                            else
+                                idealActivity = ACT_WALK;
+                        }
+                    }
+                }
+                else
+                {
+                    if ( HasWeapons() )
+                    idealActivity = ACT_HL2MP_IDLE;
+                    else
+                    idealActivity = ACT_IDLE;
+                }
+            }
+        }
+
+        //idealActivity = TranslateTeamActivity( idealActivity );
+    }
+
+    if ( IsInAVehicle() )
+    {
+        idealActivity = ACT_COVER_LOW;
+    }
+   
+    if ( idealActivity == ACT_HL2MP_GESTURE_RANGE_ATTACK )
+    {
+        RestartGesture( Weapon_TranslateActivity( idealActivity ) );
+
+        // FIXME: this seems a bit wacked
+        Weapon_SetActivity( Weapon_TranslateActivity( ACT_RANGE_ATTACK1 ), 0 );
+
+        return;
+    }
+    else if ( idealActivity == ACT_HL2MP_GESTURE_RELOAD )
+    {
+        RestartGesture( Weapon_TranslateActivity( idealActivity ) );
+        return;
+    }
+    else
+    {
+        SetActivity( idealActivity );
+
+        animDesired = SelectWeightedSequence( Weapon_TranslateActivity ( idealActivity ) );
+
+        if (animDesired == -1)
+        {
+            animDesired = SelectWeightedSequence( idealActivity );
+
+            if ( animDesired == -1 )
+            {
+                animDesired = 0;
+            }
+        }
+   
+        // Already using the desired animation?
+        if ( GetSequence() == animDesired )
+            return;
+
+        m_flPlaybackRate = 1.0;
+        ResetSequence( animDesired );
+        SetCycle( 0 );
+        return;
+    }
+
+    // Already using the desired animation?
+    if ( GetSequence() == animDesired )
+        return;
+
+    //Msg( "Set animation to %d\n", animDesired );
+    // Reset to first frame of desired animation
+    ResetSequence( animDesired );
+    SetCycle( 0 );
 }
 
 #ifdef PORTAL

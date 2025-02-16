@@ -14,6 +14,7 @@
 #include "hl2_playerlocaldata.h"
 #include "simtimer.h"
 #include "soundenvelope.h"
+#include "singleplayer_animstate.h"
 
 class CAI_Squad;
 class CPropCombineBall;
@@ -95,6 +96,7 @@ public:
 	virtual void		CreateCorpse( void ) { CopyToBodyQue( this ); };
 
 	virtual void		Precache( void );
+	void                SetAnimation( PLAYER_ANIM playerAnim );
 	virtual void		Spawn(void);
 	virtual void		Activate( void );
 	virtual void		CheatImpulseCommands( int iImpulse );
@@ -355,6 +357,9 @@ private:
 	CSimpleSimTimer		m_LowerWeaponTimer;
 	CSimpleSimTimer		m_AutoaimTimer;
 
+	CSinglePlayerAnimState *m_pPlayerAnimState;
+	QAngle m_angEyeAngles;
+
 	EHANDLE				m_hLockedAutoAimEntity;
 
 	EHANDLE				m_hLocatorTargetEntity; // The entity that's being tracked by the suit locator.
@@ -363,7 +368,6 @@ private:
 	
 	friend class CHL2GameMovement;
 };
-
 
 //-----------------------------------------------------------------------------
 // FIXME: find a better way to do this

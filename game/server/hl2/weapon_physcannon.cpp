@@ -1217,6 +1217,7 @@ public:
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
+	DECLARE_ACTTABLE();
 
 	CWeaponPhysCannon( void );
 
@@ -1370,6 +1371,7 @@ protected:
 
 	// A list of the objects thrown or punted recently, and the time done so.
 	CUtlVector< thrown_objects_t >	m_ThrownEntities;
+    
 
 	float				m_flTimeNextObjectPurge;
 
@@ -1434,6 +1436,19 @@ BEGIN_DATADESC( CWeaponPhysCannon )
 
 END_DATADESC()
 
+acttable_t CWeaponPhysCannon::m_acttable[] =
+{
+	{ ACT_HL2MP_IDLE,					ACT_HL2MP_IDLE_PHYSGUN,						false },
+	{ ACT_HL2MP_RUN,					ACT_HL2MP_RUN_PHYSGUN,						false },
+	{ ACT_HL2MP_IDLE_CROUCH,			ACT_HL2MP_IDLE_CROUCH_PHYSGUN,				false },
+	{ ACT_HL2MP_WALK_CROUCH,			ACT_HL2MP_WALK_CROUCH_PHYSGUN,				false },
+	{ ACT_HL2MP_GESTURE_RANGE_ATTACK,	ACT_HL2MP_GESTURE_RANGE_ATTACK_PHYSGUN,		false },
+	{ ACT_HL2MP_GESTURE_RELOAD,			ACT_HL2MP_GESTURE_RELOAD_PHYSGUN,			false },
+	{ ACT_HL2MP_JUMP,					ACT_HL2MP_JUMP_PHYSGUN,						false },
+	{ ACT_RANGE_ATTACK1,				ACT_RANGE_ATTACK_SLAM,						false },
+};
+
+IMPLEMENT_ACTTABLE( CWeaponPhysCannon );
 
 enum
 {
