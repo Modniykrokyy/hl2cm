@@ -189,6 +189,7 @@ $Project
 		$File	"$SRCDIR\game\shared\animation.cpp"
 		$File	"$SRCDIR\game\shared\base_playeranimstate.cpp"
 		$File	"$SRCDIR\game\shared\baseachievement.cpp"
+		$File	"mapload_background.h"
 		$File	"$SRCDIR\game\shared\baseachievement.h"
 		$File	"baseanimatedtextureproxy.cpp"
 		$File	"baseclientrendertargets.cpp"

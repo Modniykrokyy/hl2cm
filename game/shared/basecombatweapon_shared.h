@@ -193,6 +193,16 @@ public:
 	virtual void			SetPickupTouch( void );
 	virtual void 			DefaultTouch( CBaseEntity *pOther );	// default weapon touch
 	virtual void			GiveTo( CBaseEntity *pOther );
+     
+	Vector					GetIronsightPositionOffset( void ) const;
+	QAngle					GetIronsightAngleOffset( void ) const;
+	float					GetIronsightFOVOffset( void ) const;
+	virtual bool			HasIronsights( void ) { return true; } //default yes; override and return false for weapons with no ironsights (like weapon_crowbar)
+	bool					IsIronsighted( void );
+	void					ToggleIronsights( void );
+	void					EnableIronsights( void );
+	void					DisableIronsights( void );
+	void					SetIronsightTime( void );
 
 	// HUD Hints
 	virtual bool			ShouldDisplayAltFireHUDHint();
@@ -209,7 +219,9 @@ public:
 	virtual void			SendViewModelAnim( int nSequence );
 	float					GetViewModelSequenceDuration();	// Return how long the current view model sequence is.
 	bool					IsViewModelSequenceFinished( void ); // Returns if the viewmodel's current animation is finished
-
+    virtual void            ProcessAnimationEvents(void);
+	bool                    m_bWeaponIsLowered;
+	
 	virtual void			SetViewModel();
 
 	virtual bool			HasWeaponIdleTimeElapsed( void );
@@ -553,6 +565,11 @@ public:
 	// Weapon art
 	CNetworkVar( int, m_iViewModelIndex );
 	CNetworkVar( int, m_iWorldModelIndex );
+
+	// Ironsights
+	CNetworkVar( bool, m_bIsIronsighted );
+	CNetworkVar( float, m_flIronsightedTime );
+
 	// Sounds
 	float					m_flNextEmptySoundTime;				// delay on empty sound playing
 

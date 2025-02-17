@@ -333,6 +333,8 @@ bool CWeaponShotgun::Reload( void )
 		Warning("ERROR: Shotgun Reload called incorrectly!\n");
 	}
 
+	DisableIronsights();
+
 	CBaseCombatCharacter *pOwner  = GetOwner();
 	
 	if ( pOwner == NULL )

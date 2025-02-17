@@ -103,6 +103,14 @@ public:
 
 	float			m_flNextAttack;
 
+	//Cloak functions
+    int GetCloakStatus( void ) { return m_intCloakStatus; }
+    float GetCloakFactor( void ) { return m_floatCloakFactor; }
+
+    //Cloak variables
+    int m_intCloakStatus;
+    float m_floatCloakFactor;
+
 protected:
 
 #ifdef GLOWS_ENABLE	

@@ -391,6 +391,25 @@ public:
 	void SetRelationshipString( string_t theString ) { m_RelationshipString = theString; }
 
 	float				GetNextAttack() const { return m_flNextAttack; }
+
+	//Cloak variables
+    CNetworkVar( int, m_intCloakStatus );
+    CNetworkVar( float, m_floatCloakFactor );
+
+	//Cloak functions
+    int GetCloakStatus( void ) { return m_intCloakStatus; }
+    void SetCloakStatus( int cloakstatus )
+    {
+        SetTransmitState( FL_EDICT_ALWAYS );
+        m_intCloakStatus.Set( cloakstatus );
+    }
+        float GetCloakFactor( void ) { return m_floatCloakFactor; }
+        void SetCloakFactor( float cloakfactor )
+    {
+        SetTransmitState( FL_EDICT_ALWAYS );
+        m_floatCloakFactor.Set( cloakfactor );
+    }
+
 	void				SetNextAttack( float flWait ) { m_flNextAttack = flWait; }
 
 	bool				m_bForceServerRagdoll;

@@ -59,6 +59,7 @@ public:
 
 	// Initializes the viewmodel for use							
 	void					SetOwner( CBaseEntity *pEntity );
+	void		            CalcIronsights( Vector &pos, QAngle &ang );
 	void					SetIndex( int nIndex );
 	// Returns which viewmodel it is
 	int						ViewModelIndex( ) const;

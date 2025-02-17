@@ -66,6 +66,10 @@ extern ConVar replay_rendersetting_renderglow;
 #include "econ_item_description.h"
 #endif
 
+// Fenix: Needed for the custom background loading screens
+#include "GameUI/IGameUI.h"
+#include "mapload_background.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -77,6 +81,11 @@ class CHudVote;
 
 static vgui::HContext s_hVGuiContext = DEFAULT_VGUI_CONTEXT;
 
+// Fenix: Needed for the custom background loading screens
+// See interface.h/.cpp for specifics: basically this ensures that we actually Sys_UnloadModule the dll and that we don't call Sys_LoadModule 
+// over and over again.
+static CDllDemandLoader g_GameUI( "GameUI" );
+
 ConVar cl_drawhud( "cl_drawhud", "1", FCVAR_CHEAT, "Enable the rendering of the hud" );
 ConVar hud_takesshots( "hud_takesshots", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Auto-save a scoreboard screenshot at the end of a map." );
 ConVar hud_freezecamhide( "hud_freezecamhide", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Hide the HUD during freeze-cam" );
@@ -86,6 +95,10 @@ extern ConVar v_viewmodel_fov;
 extern ConVar voice_modenable;
 
 extern bool IsInCommentaryMode( void );
+
+// Fenix: Needed for the custom background loading screens
+CMapLoadBG *pPanelBg;
+IMaterial *pMatMapBg;
 
 #ifdef VOICE_VOX_ENABLE
 void VoxCallback( IConVar *var, const char *oldString, float oldFloat )
@@ -289,6 +302,10 @@ ClientModeShared::ClientModeShared()
 	m_pChatElement = NULL;
 	m_pWeaponSelection = NULL;
 	m_nRootSize[ 0 ] = m_nRootSize[ 1 ] = -1;
+
+	// Fenix: Needed for the custom background loading screens
+    pPanelBg = NULL;
+    pMatMapBg = NULL;
 
 #if defined( REPLAY_ENABLED )
 	m_pReplayReminderPanel = NULL;
@@ -821,6 +838,17 @@ void ClientModeShared::LevelInit( const char *newmap )
 	// Reset any player explosion/shock effects
 	CLocalPlayerFilter filter;
 	enginesound->SetPlayerDSP( filter, 0, true );
+
+	// Fenix: Custom background loading screens - decides if use a loading screen for a map or a default one
+    #ifdef _WIN32
+    char szMapBgName[MAX_PATH];
+    #else	// !_WIN32
+    char szMapBgName[PATH_MAX];
+    #endif	// _WIN32
+
+    Q_snprintf( szMapBgName, sizeof( szMapBgName ), "vgui/loading/maps/%s", newmap );
+
+    pMatMapBg = materials->FindMaterial( szMapBgName, TEXTURE_GROUP_OTHER );
 }
 
 //-----------------------------------------------------------------------------
@@ -1394,4 +1422,3 @@ void ClientModeShared::DeactivateInGameVGuiContext()
 {
 	vgui::ivgui()->ActivateContext( DEFAULT_VGUI_CONTEXT );
 }
-

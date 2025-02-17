@@ -64,6 +64,8 @@ extern int	g_interactionBarnacleVictimReleased;
 extern ConVar weapon_showproficiency;
 
 ConVar ai_show_hull_attacks( "ai_show_hull_attacks", "0" );
+ConVar player_cloak_custom( "player_cloak_custom", "0", FCVAR_CHEAT, "Enable cloak factor modification" );
+ConVar player_cloak_factor( "player_cloak_factor", "0.0", FCVAR_CHEAT, "Cloak factor" );
 ConVar ai_force_serverside_ragdoll( "ai_force_serverside_ragdoll", "0" );
 
 ConVar nb_last_area_update_tolerance( "nb_last_area_update_tolerance", "4.0", FCVAR_CHEAT, "Distance a character needs to travel in order to invalidate cached area" ); // 4.0 tested as sweet spot (for wanderers, at least). More resulted in little benefit, less quickly diminished benefit [7/31/2008 tom]
@@ -83,6 +85,10 @@ BEGIN_DATADESC( CBaseCombatCharacter )
 	DEFINE_ARRAY( m_flPowerupEndTimes, FIELD_TIME, MAX_POWERUPS ),
 	DEFINE_FIELD( m_flFractionalBoost, FIELD_FLOAT ),
 #endif
+
+    //Cloak variables
+    DEFINE_FIELD( m_intCloakStatus, FIELD_INTEGER ),
+    DEFINE_FIELD( m_floatCloakFactor, FIELD_FLOAT ),
 
 	DEFINE_FIELD( m_flNextAttack, FIELD_TIME ),
 	DEFINE_FIELD( m_eHull, FIELD_INTEGER ),
@@ -195,6 +201,10 @@ IMPLEMENT_SERVERCLASS_ST(CBaseCombatCharacter, DT_BaseCombatCharacter)
 #endif // GLOWS_ENABLE
 	// Data that only gets sent to the local player.
 	SendPropDataTable( "bcc_localdata", 0, &REFERENCE_SEND_TABLE(DT_BCCLocalPlayerExclusive), SendProxy_SendBaseCombatCharacterLocalDataTable ),
+    
+	//Cloak data
+    SendPropInt( SENDINFO( m_intCloakStatus ) ),
+    SendPropFloat( SENDINFO ( m_floatCloakFactor ) ),
 
 	SendPropEHandle( SENDINFO( m_hActiveWeapon ) ),
 	SendPropArray3( SENDINFO_ARRAY3(m_hMyWeapons), SendPropEHandle( SENDINFO_ARRAY(m_hMyWeapons) ) ),
@@ -717,6 +727,8 @@ CBaseCombatCharacter::CBaseCombatCharacter( void )
 
 	// Init weapon and Ammo data
 	m_hActiveWeapon			= NULL;
+	m_intCloakStatus.Set( 0 );
+    m_floatCloakFactor.Set( 0.0f );
 
 	// reset all ammo values to 0
 	RemoveAllAmmo();
@@ -1073,6 +1085,58 @@ void CBaseCombatCharacter::Weapon_FrameUpdate( void )
 	{
 		m_hActiveWeapon->Operator_FrameUpdate( this );
 	}
+	//Cloak effects
+    if ( !engine->IsPaused() )
+    {
+        if ( player_cloak_custom.GetInt() == 0 && !dynamic_cast< CBasePlayer *>(this) )
+    {
+        if ( GetCloakStatus() == 1 && m_floatCloakFactor.Get() == 0.0f || GetCloakStatus() == 1 && m_floatCloakFactor.Get())
+        SetCloakStatus( 0 );
+        if ( GetCloakStatus() == 3 && m_floatCloakFactor.Get() == 1.0f || GetCloakStatus() == 3 && m_floatCloakFactor.Get() >= 1.0f )
+        SetCloakStatus( 2 );
+        if ( GetCloakStatus() == 0 )
+    {
+        m_floatCloakFactor.Set( 0.0f );
+        RemoveEffects( EF_NOSHADOW );
+    }
+        if ( GetCloakStatus() == 2 )
+    {
+        m_floatCloakFactor.Set( 1.0f );
+        AddEffects( EF_NOSHADOW );
+    }
+        if ( GetCloakStatus() == 1 && m_floatCloakFactor.Get() != 0.0f || GetCloakStatus() == 1 && m_floatCloakFactor.Get() >= 0.0f )
+    {
+        m_floatCloakFactor.Set( m_floatCloakFactor.Get() - 0.005f );
+    }
+        if ( GetCloakStatus() == 3 && m_floatCloakFactor.Get() != 1.0f || GetCloakStatus() == 3 && m_floatCloakFactor.Get())
+    {
+        m_floatCloakFactor.Set( m_floatCloakFactor.Get() + 0.005f );
+    }
+}
+    if ( player_cloak_custom.GetInt() == 0 && dynamic_cast< CBasePlayer *>(this) )
+    {
+        if ( GetCloakStatus() == 1 && m_floatCloakFactor.Get() == 0.0f || GetCloakStatus() == 1 && m_floatCloakFactor.Get())
+        SetCloakStatus( 0 );
+        if ( GetCloakStatus() == 3 && m_floatCloakFactor.Get() == 0.75f || GetCloakStatus() == 3 && m_floatCloakFactor.Get() >= 0.75f )
+        SetCloakStatus( 2 );
+        if ( GetCloakStatus() == 0 )
+        m_floatCloakFactor.Set( 0.0f );
+        if ( GetCloakStatus() == 2 )
+        m_floatCloakFactor.Set( 0.75f );
+        if ( GetCloakStatus() == 1 && m_floatCloakFactor.Get() != 0.0f || GetCloakStatus() == 1 && m_floatCloakFactor.Get() >= 0.0f )
+    {
+        m_floatCloakFactor.Set( m_floatCloakFactor.Get() - 0.005f );
+    }
+        if ( GetCloakStatus() == 3 && m_floatCloakFactor.Get() != 0.75f || GetCloakStatus() == 3 && m_floatCloakFactor.Get())
+    {
+        m_floatCloakFactor.Set( m_floatCloakFactor.Get() + 0.005f );
+    }
+ }
+    if ( player_cloak_custom.GetInt() == 1 )
+    {
+        m_floatCloakFactor = player_cloak_factor.GetFloat();
+    }
+  }
 }
 
 
